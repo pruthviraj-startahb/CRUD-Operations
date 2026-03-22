@@ -34,7 +34,7 @@ public class Main {
                 case 2 -> delete();
                 case 3 -> update();
                 case 4 -> display();
-               case 5 -> insertBatch();
+                case 5 -> insertBatch();
                 case 6 -> {
                     break;
                 }
@@ -155,8 +155,9 @@ public class Main {
 
 
     public static void display() {
+        Connection con = null;
         try {
-            Connection con = getConnection();
+            con = getConnection();
 
             Statement stmt = con.createStatement();
 
@@ -176,6 +177,8 @@ public class Main {
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
+        } finally {
+            closeConnection(con);
         }
     }
 
@@ -214,6 +217,8 @@ public class Main {
                 System.out.println(ex.getMessage());
             }
             System.out.println(e.getMessage());
+        }finally {
+            closeConnection(con);
         }
     }
 
@@ -320,6 +325,8 @@ public class Main {
                 System.out.println(ex.getMessage());
             }
             System.out.println(e.getMessage());
+        }finally {
+            closeConnection(con);
         }
     }
 
