@@ -63,8 +63,8 @@ String password="root";
 4. Compile & run:
 
 ```bash
-javac Main.java
-java Main
+javac -cp ".;mysql-connector-j-9.6.0.jar" Main.java
+java -cp ".;mysql-connector-j-9.6.0.jar" Main
 ```
 
 ---
