@@ -3,60 +3,55 @@ import java.sql.*;
 
 public class Main {
 
-    public static Connection getConnection() throws SQLException ,ClassNotFoundException{
+    public static Connection getConnection() throws SQLException, ClassNotFoundException {
         Class.forName("com.mysql.cj.jdbc.Driver");
-        String url="jdbc:mysql://localhost:3306/startAhb";
-        return DriverManager.getConnection(
-                url,
-                "root",
-                "root"
-        );
+        String url = "jdbc:mysql://localhost:3306/startAhb";
+        return DriverManager.getConnection(url, "root", "root");
     }
-    
+
     public static void main(String[] args) {
-        
+
         try {
             int ch;
             Scanner sc = new Scanner(System.in);
-        do {
-            System.out.println("\nChoose the Option ");
-            System.out.println("1.Insert Record ");
-            System.out.println("2.Delete Record");
-            System.out.println("3.Update Record");
-            System.out.println("4.Display all Records");
-            System.out.println("5.Insert Multiple Records");
-            System.out.println("6.Exit");
 
-            ch = sc.nextInt();
+            do {
+                System.out.println("\nChoose the Option ");
+                System.out.println("1.Insert Record ");
+                System.out.println("2.Delete Record");
+                System.out.println("3.Update Record");
+                System.out.println("4.Display all Records");
+                System.out.println("5.Insert Multiple Records");
+                System.out.println("6.Exit");
 
-            switch (ch) {
-                case 1 -> insert();
-                case 2 -> delete();
-                case 3 -> update();
-                case 4 -> display();
-                case 5 -> insertBatch();
-                case 6 -> {
-                    break;
+                ch = sc.nextInt();
+
+                switch (ch) {
+                    case 1 -> insert();
+                    case 2 -> delete();
+                    case 3 -> update();
+                    case 4 -> display();
+                    case 5 -> insertBatch();
+                    case 6 -> System.out.println("Exiting...");
                 }
-            }
-        }while(ch!=6);
+
+            } while (ch != 6);
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static void insertBatch() throws SQLException {
+    public static void insertBatch() {
 
         Scanner sc = new Scanner(System.in);
-
-        System.out.print("How many records do you want to insert: ");
-        int count = sc.nextInt();
-
         Connection con = null;
         PreparedStatement stmt = null;
 
         try {
+            System.out.print("How many records do you want to insert: ");
+            int count = sc.nextInt();
+
             con = getConnection();
             con.setAutoCommit(false);
 
@@ -84,24 +79,24 @@ public class Main {
                 stmt.setString(3, mname);
                 stmt.setString(4, lname);
 
-                stmt.addBatch();   // Add to batch
+                stmt.addBatch();
             }
 
-            int[] res = stmt.executeBatch();  // Execute batch
+            int[] res = stmt.executeBatch();
             con.commit();
 
             System.out.println(res.length + " rows inserted successfully.");
 
-        } catch (SQLDataException | ClassNotFoundException e) {
-            if (con != null) {
-                con.rollback();   // Rollback on error
+        } catch (Exception e) {
+            rollbackConnection(con);
+            System.out.println("Batch Error: " + e.getMessage());
+        } finally {
+            try {
+                if (stmt != null) stmt.close();
+                closeConnection(con);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
             }
-            System.out.println(e.getMessage());
-        }
-        finally {
-            if (stmt != null) stmt.close();
-            if (con != null) con.close();
-            sc.close();
         }
     }
 
@@ -140,39 +135,36 @@ public class Main {
             }
 
             con.commit();
-            stmt.clearBatch();
+
         } catch (SQLIntegrityConstraintViolationException e) {
-            System.out.println("Duplicate Entry: Roll number already exists");
-        } catch (SQLException e) {
             rollbackConnection(con);
-            System.out.println("SQL Error: " + e.getMessage());
-        } catch (ClassNotFoundException e) {
-            System.out.println("Driver Error: " + e.getMessage());
+            System.out.println("Duplicate Entry: Roll number already exists");
+        } catch (Exception e) {
+            rollbackConnection(con);
+            System.out.println("Error: " + e.getMessage());
         } finally {
             closeConnection(con);
         }
     }
 
-
     public static void display() {
         Connection con = null;
+
         try {
             con = getConnection();
-
             Statement stmt = con.createStatement();
-
             ResultSet rs = stmt.executeQuery("SELECT * FROM dyp");
 
-            System.out.println("Roll Number | First Name | Middle Name | Last Name");
-            System.out.println("---------------------------------------------------");
+            System.out.println("Roll | First | Middle | Last");
+            System.out.println("--------------------------------");
 
             while (rs.next()) {
-                int roll = rs.getInt("roll");
-                String fname = rs.getString("fname");
-                String mname = rs.getString("mname");
-                String lname = rs.getString("lname");
-
-                System.out.println(roll + " | " + fname + " | " + mname + " | " + lname);
+                System.out.println(
+                        rs.getInt("roll") + " | " +
+                                rs.getString("fname") + " | " +
+                                rs.getString("mname") + " | " +
+                                rs.getString("lname")
+                );
             }
 
         } catch (Exception e) {
@@ -211,17 +203,12 @@ public class Main {
             con.commit();
 
         } catch (Exception e) {
-            try {
-                if (con != null) con.rollback();
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
+            rollbackConnection(con);
             System.out.println(e.getMessage());
-        }finally {
+        } finally {
             closeConnection(con);
         }
     }
-
 
     public static void update() {
         Connection con = null;
@@ -236,12 +223,7 @@ public class Main {
             int roll = sc.nextInt();
             sc.nextLine();
 
-            System.out.println("What do you want to update?");
-            System.out.println("1. First Name");
-            System.out.println("2. Middle Name");
-            System.out.println("3. Last Name");
-            System.out.println("4. All Fields");
-
+            System.out.println("1.First Name  2.Middle Name  3.Last Name  4.All");
             int choice = sc.nextInt();
             sc.nextLine();
 
@@ -253,9 +235,7 @@ public class Main {
                     System.out.println("Enter New First Name:");
                     String fname = sc.nextLine();
 
-                    stmt = con.prepareStatement(
-                            "UPDATE dyp SET fname=? WHERE roll=?"
-                    );
+                    stmt = con.prepareStatement("UPDATE dyp SET fname=? WHERE roll=?");
                     stmt.setString(1, fname);
                     stmt.setInt(2, roll);
                 }
@@ -264,9 +244,7 @@ public class Main {
                     System.out.println("Enter New Middle Name:");
                     String mname = sc.nextLine();
 
-                    stmt = con.prepareStatement(
-                            "UPDATE dyp SET mname=? WHERE roll=?"
-                    );
+                    stmt = con.prepareStatement("UPDATE dyp SET mname=? WHERE roll=?");
                     stmt.setString(1, mname);
                     stmt.setInt(2, roll);
                 }
@@ -275,21 +253,17 @@ public class Main {
                     System.out.println("Enter New Last Name:");
                     String lname = sc.nextLine();
 
-                    stmt = con.prepareStatement(
-                            "UPDATE dyp SET lname=? WHERE roll=?"
-                    );
+                    stmt = con.prepareStatement("UPDATE dyp SET lname=? WHERE roll=?");
                     stmt.setString(1, lname);
                     stmt.setInt(2, roll);
                 }
 
                 case 4 -> {
-                    System.out.println("Enter New First Name:");
+                    System.out.println("Enter First Name:");
                     String fname = sc.nextLine();
-
-                    System.out.println("Enter New Middle Name:");
+                    System.out.println("Enter Middle Name:");
                     String mname = sc.nextLine();
-
-                    System.out.println("Enter New Last Name:");
+                    System.out.println("Enter Last Name:");
                     String lname = sc.nextLine();
 
                     stmt = con.prepareStatement(
@@ -319,13 +293,9 @@ public class Main {
             con.commit();
 
         } catch (Exception e) {
-            try {
-                if (con != null) con.rollback();
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
+            rollbackConnection(con);
             System.out.println(e.getMessage());
-        }finally {
+        } finally {
             closeConnection(con);
         }
     }
@@ -334,6 +304,7 @@ public class Main {
         try {
             if (con != null) {
                 con.rollback();
+                System.out.println("Transaction Rolled Back");
             }
         } catch (SQLException ex) {
             System.out.println("Rollback Error: " + ex.getMessage());
